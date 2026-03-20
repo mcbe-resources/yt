@@ -85,15 +85,13 @@
     .overlay.active .share-modal { transform: translateY(0); }
     .share-modal .close-btn { position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); font-size: 1.35em; cursor: pointer; transition: transform 0.2s ease; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10; }
     .share-modal .close-btn:hover { transform: scale(1.05); }
-    .share-title { font-size: 1.2em; font-weight: 800; text-align: center; margin: 0 0 14px 0; text-shadow: 0 0 10px rgba(255, 255, 255, 0.15); }
+    .share-title { font-size: 1.2em; font-weight: 800; text-align: center; margin: 0 0 14px 0; text-shadow: 0 0 10px rgba(255,255,255,0.15); }
     .share-link-row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
     .share-url { flex: 1; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.25); color: #ddd; font-size: 0.9em; word-break: break-all; }
     .copy-share-btn { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--button-bg); color: white; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; display: flex; align-items: center; justify-content: center; font-size: 1.1em; position: relative; }
     .copy-share-btn:hover { transform: translateY(-1px) scale(1.02); background: var(--button-hover); }
     .copy-share-btn.copied i { display: none; }
     .copy-share-btn.copied::after { content: "✓"; font-size: 1.2em; }
-    .copy-feedback { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; margin-bottom: 4px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
-    .copy-share-btn.show-feedback .copy-feedback { opacity: 1; }
     .alternative-toggle { display: block; width: 100%; margin: 10px 0; padding: 8px; border: 1px solid var(--glass-border); background: var(--button-bg); color: white; border-radius: 8px; cursor: pointer; text-align: center; transition: background 0.2s; }
     .alternative-toggle:hover { background: var(--button-hover); }
     .alternative-links { display: none; margin-top: 10px; }
@@ -239,7 +237,7 @@
   let shareCodeToUuid = new Map();
   let titleSlugToItem = new Map(); // for alternative links
   const SHARE_CODE_BASE_DLC = 'https://mcbe-resources.github.io/yt/';
-  const SHARE_CODE_BASE_NETLIFY = 'https://marketplacedlc.netlify.app/';
+  const SHARE_CODE_BASE_NETLIFY = 'https://marketplacedlc.netlify.app';
   const SHARE_CODE_RE = /^s[a-z0-9]{3}[0-9a-f]{3}e$/i;
 
   function normalizeShareNamePart(title) {
@@ -278,23 +276,9 @@
     });
   }
 
-  function getShareCodeFromPathname() {
-    const parts = String(window.location.pathname || '').split('/').filter(Boolean);
-    const last = parts[parts.length - 1] || '';
-    const normalized = last.trim().toLowerCase();
-    return SHARE_CODE_RE.test(normalized) ? normalized : null;
-  }
-
-  // Get slug from pathname (if not a share code)
-  function getSlugFromPathname() {
-    const parts = String(window.location.pathname || '').split('/').filter(Boolean);
-    const last = parts[parts.length - 1] || '';
-    const normalized = last.trim().toLowerCase();
-    // If it's not a share code and not empty, treat as slug
-    if (normalized && !SHARE_CODE_RE.test(normalized)) {
-      return normalized;
-    }
-    return null;
+  // Get hash from URL (without #)
+  function getHashFromUrl() {
+    return window.location.hash ? window.location.hash.slice(1) : null;
   }
 
   const ITEMS_PER_PAGE = 15;
@@ -799,16 +783,16 @@
     if (!item) return;
 
     const code = generateShareCode(item.title, item.uuid);
-    const url1 = `${SHARE_CODE_BASE_DLC}${code}`;
-    const url2 = `${SHARE_CODE_BASE_NETLIFY}${code}`;
+    const url1 = `${SHARE_CODE_BASE_DLC}/#${code}`;
+    const url2 = `${SHARE_CODE_BASE_NETLIFY}/#${code}`;
 
     shareOverlayEl.querySelector('#shareUrl1').textContent = url1;
     shareOverlayEl.querySelector('#shareUrl2').textContent = url2;
 
     // Alternative links (title slug)
     const slug = generateTitleSlug(item.title);
-    const altUrl1 = `${SHARE_CODE_BASE_DLC}${slug}`;
-    const altUrl2 = `${SHARE_CODE_BASE_NETLIFY}${slug}`;
+    const altUrl1 = `${SHARE_CODE_BASE_DLC}/#${slug}`;
+    const altUrl2 = `${SHARE_CODE_BASE_NETLIFY}/#${slug}`;
     shareOverlayEl.querySelector('#altShareUrl1').textContent = altUrl1;
     shareOverlayEl.querySelector('#altShareUrl2').textContent = altUrl2;
 
@@ -935,6 +919,23 @@
     try {
       if (!/^https?:\/\//i.test(t)) return null;
       const u = new URL(t);
+      // Extract hash (if any)
+      if (u.hash) {
+        const hash = u.hash.slice(1);
+        if (SHARE_CODE_RE.test(hash)) {
+          const mapped = shareCodeToUuid.get(hash.toLowerCase());
+          if (mapped) return mapped;
+        }
+        // Try as slug
+        try {
+          const decodedSlug = decodeURIComponent(hash).toLowerCase().replace(/\s+/g, '');
+          for (let [slug, item] of titleSlugToItem.entries()) {
+            if (slug === decodedSlug) {
+              return item.uuid.toLowerCase();
+            }
+          }
+        } catch (e) {}
+      }
       const idParam = u.searchParams.get('id');
       if (idParam) return String(idParam).toLowerCase();
 
@@ -1095,35 +1096,13 @@
 
     if (itemsData.length > 0) { renderItems(); setupInfiniteScroll(); }
 
-    // Deep link: first try share code, then slug
-    const shareCodeFromPath = getShareCodeFromPathname();
-    if (shareCodeFromPath) {
+    // Deep link from hash
+    const hash = getHashFromUrl();
+    if (hash) {
       const searchInput = document.getElementById('searchInput');
       if (searchInput) {
-        searchInput.value = shareCodeFromPath;
+        searchInput.value = hash;
         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } else {
-      const slugFromPath = getSlugFromPathname();
-      if (slugFromPath) {
-        // Try to find item by slug
-        const decodedSlug = decodeURIComponent(slugFromPath).toLowerCase().replace(/\s+/g, '');
-        let foundItem = null;
-        for (let [slug, item] of titleSlugToItem.entries()) {
-          if (slug === decodedSlug) {
-            foundItem = item;
-            break;
-          }
-        }
-        if (foundItem) {
-          const searchInput = document.getElementById('searchInput');
-          if (searchInput) {
-            // Put the item's title into search? Better to put the slug itself so extractUuidFromSearchText can find it.
-            // But extractUuidFromSearchText already handles slugs. So put the slug.
-            searchInput.value = slugFromPath;
-            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        }
       }
     }
 
