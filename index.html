@@ -4089,19 +4089,19 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
   let titleSlugToItem = new Map(); // for alternative links
   const SHARE_CODE_BASE_DLC = 'https://mcbe-resources.github.io/yt';
   const SHARE_CODE_BASE_NETLIFY = 'https://marketplacedlc.netlify.app';
-  // Updated regex: exactly 6 characters (3 name part + 3 id part), no s prefix or e suffix
-  const SHARE_CODE_RE = /^[a-z0-9]{6}$/i;
+  // Updated regex for 4-character codes (2 from name + 2 from uuid)
+  const SHARE_CODE_RE = /^[a-z0-9]{4}$/i;
 
   function normalizeShareNamePart(title) {
     const normalized = String(title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const part = normalized.slice(0, 3);
-    return part.padEnd(3, 'x');
+    const part = normalized.slice(0, 2);
+    return part.padEnd(2, 'x');
   }
 
   function generateShareCode(title, uuid) {
     const namePart = normalizeShareNamePart(title);
-    const idPart = String(uuid || '').toLowerCase().slice(0, 3);
-    // Removed 's' prefix and 'e' suffix
+    const idPart = String(uuid || '').toLowerCase().slice(0, 2);
+    // Return 4-character code: 2 from name + 2 from uuid
     return `${namePart}${idPart}`;
   }
 
