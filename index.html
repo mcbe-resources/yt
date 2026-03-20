@@ -33,7 +33,18 @@
       50%     { background-position: 100% 50%; }
     }
     header { text-align: center; margin-bottom: 25px; position: relative; z-index: 2; }
-    h1 { font-size: 2.5em; margin-bottom: 15px; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
+    h1 { 
+      font-size: 2.5em; 
+      margin-bottom: 15px; 
+      text-shadow: 0 0 12px rgba(255,255,255,0.3);
+      cursor: pointer;
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    h1:hover {
+      transform: scale(1.05);
+      text-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
     .search-container { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 320px; margin: 0 auto; }
     .input-group { display: flex; flex-direction: column; gap: 12px; width: 100%; }
     .search-wrapper, .request-wrapper { display: flex; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 5px; transition: transform 0.3s ease; height: 38px; width: 100%; }
@@ -86,16 +97,20 @@
     .share-modal .close-btn { position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); font-size: 1.35em; cursor: pointer; transition: transform 0.2s ease; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10; }
     .share-modal .close-btn:hover { transform: scale(1.05); }
     .share-title { font-size: 1.2em; font-weight: 800; text-align: center; margin: 0 0 14px 0; text-shadow: 0 0 10px rgba(255,255,255,0.15); }
-    .share-link-row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+    .share-label { 
+      font-size: 0.8em; 
+      color: #aaa; 
+      margin: 15px 0 5px 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .share-label:first-of-type { margin-top: 0; }
+    .share-link-row { display: flex; gap: 8px; align-items: center; margin: 5px 0; }
     .share-url { flex: 1; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.25); color: #ddd; font-size: 0.9em; word-break: break-all; }
     .copy-share-btn { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--button-bg); color: white; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; display: flex; align-items: center; justify-content: center; font-size: 1.1em; position: relative; }
     .copy-share-btn:hover { transform: translateY(-1px) scale(1.02); background: var(--button-hover); }
     .copy-share-btn.copied i { display: none; }
     .copy-share-btn.copied::after { content: "✓"; font-size: 1.2em; }
-    .alternative-toggle { display: block; width: 100%; margin: 10px 0; padding: 8px; border: 1px solid var(--glass-border); background: var(--button-bg); color: white; border-radius: 8px; cursor: pointer; text-align: center; transition: background 0.2s; }
-    .alternative-toggle:hover { background: var(--button-hover); }
-    .alternative-links { display: none; margin-top: 10px; }
-    .alternative-links.show { display: block; }
 
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .modal-title { font-size: 1.4em; font-weight: 700; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
@@ -158,7 +173,7 @@
 <body>
 <div class="stars" id="stars"></div>
 <header>
-  <h1>Marketplace</h1>
+  <h1 id="logo">Marketplace</h1>
   <div class="search-container">
     <div class="input-group">
       <div class="search-wrapper">
@@ -4086,10 +4101,9 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
   const FAVOURITES_KEY = 'marketplace_favourites';
   let itemsData = [];
   let shareCodeToUuid = new Map();
-  let titleSlugToItem = new Map(); // for alternative links
+  let titleSlugToItem = new Map();
   const SHARE_CODE_BASE_DLC = 'https://mcbe-resources.github.io/yt';
   const SHARE_CODE_BASE_NETLIFY = 'https://marketplacedlc.netlify.app';
-  // Updated regex for 4-character codes (2 from name + 2 from uuid)
   const SHARE_CODE_RE = /^[a-z0-9]{4}$/i;
 
   function normalizeShareNamePart(title) {
@@ -4101,15 +4115,11 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
   function generateShareCode(title, uuid) {
     const namePart = normalizeShareNamePart(title);
     const idPart = String(uuid || '').toLowerCase().slice(0, 2);
-    // Return 4-character code: 2 from name + 2 from uuid
     return `${namePart}${idPart}`;
   }
 
-  // Generate title slug for alternative links
   function generateTitleSlug(title) {
-    // Remove spaces, then encodeURIComponent to handle special chars
-    const noSpaces = title.replace(/\s+/g, '');
-    return encodeURIComponent(noSpaces);
+    return title.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
   }
 
   function buildShareCodeIndex() {
@@ -4120,16 +4130,13 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       const uuidLower = String(item.uuid).toLowerCase();
       shareCodeToUuid.set(code, uuidLower);
 
-      // For alternative links, store slug -> item
       const slug = generateTitleSlug(item.title).toLowerCase();
-      // If multiple items have same slug (rare), keep first or last? We'll keep first.
       if (!titleSlugToItem.has(slug)) {
         titleSlugToItem.set(slug, item);
       }
     });
   }
 
-  // Get hash from URL (without #)
   function getHashFromUrl() {
     return window.location.hash ? window.location.hash.slice(1) : null;
   }
@@ -4140,7 +4147,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
   let isLoading = false;
   let hasMoreItems = true;
 
-  // slider elements
   let slideTrack, sliderPrev, sliderNext, sliderDots;
 
   function createStars() {
@@ -4217,7 +4223,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       updateNameSortLabel();
       updateSortUI();
     }
-    // Build maps after loading data
     buildShareCodeIndex();
   }
 
@@ -4387,7 +4392,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
 
   function renderItems() { resetPagination(); renderCurrentPage(); }
 
-  // ---------- SLIDER FUNCTIONS ----------
   function initSliderElements() {
     slideTrack = document.getElementById('sliderTrack');
     sliderPrev = document.getElementById('sliderPrev');
@@ -4487,7 +4491,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     if (sliderDots) sliderDots.innerHTML = '';
   }
 
-  // ---------- OVERLAY ----------
   const overlay = document.getElementById('downloadOverlay');
   const modalTitle = document.getElementById('modalTitle');
   const modalType = document.getElementById('modalType');
@@ -4528,7 +4531,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     shareOverlayEl.classList.remove('active');
   }
 
-  // Helper to show copy feedback on a button
   function showCopyFeedback(btn) {
     btn.classList.add('copied');
     setTimeout(() => btn.classList.remove('copied'), 1500);
@@ -4547,37 +4549,34 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
         </button>
         <div class="share-title">Share</div>
 
-        <!-- Primary links (share code based) -->
+        <!-- Short (Title+UUID 4 chars) -->
+        <div class="share-label">Short</div>
         <div class="share-link-row">
-          <div class="share-url" id="shareUrl1"></div>
-          <button class="copy-share-btn" id="copyShareUrl1Btn" type="button" aria-label="Copy dlc link">
+          <div class="share-url" id="shortShareUrlDlc"></div>
+          <button class="copy-share-btn" id="copyShortDlcBtn" type="button" aria-label="Copy DLC link">
             <i class="fas fa-copy"></i>
           </button>
         </div>
         <div class="share-link-row">
-          <div class="share-url" id="shareUrl2"></div>
-          <button class="copy-share-btn" id="copyShareUrl2Btn" type="button" aria-label="Copy netlify link">
+          <div class="share-url" id="shortShareUrlNetlify"></div>
+          <button class="copy-share-btn" id="copyShortNetlifyBtn" type="button" aria-label="Copy Netlify link">
             <i class="fas fa-copy"></i>
           </button>
         </div>
 
-        <!-- Alternative toggle button -->
-        <button class="alternative-toggle" id="alternativeToggleBtn">Alternative</button>
-
-        <!-- Alternative links (title slug based) -->
-        <div class="alternative-links" id="alternativeLinks">
-          <div class="share-link-row">
-            <div class="share-url" id="altShareUrl1"></div>
-            <button class="copy-share-btn" id="copyAltUrl1Btn" type="button" aria-label="Copy alternative dlc link">
-              <i class="fas fa-copy"></i>
-            </button>
-          </div>
-          <div class="share-link-row">
-            <div class="share-url" id="altShareUrl2"></div>
-            <button class="copy-share-btn" id="copyAltUrl2Btn" type="button" aria-label="Copy alternative netlify link">
-              <i class="fas fa-copy"></i>
-            </button>
-          </div>
+        <!-- Medium (Title only) -->
+        <div class="share-label">Medium</div>
+        <div class="share-link-row">
+          <div class="share-url" id="mediumShareUrlDlc"></div>
+          <button class="copy-share-btn" id="copyMediumDlcBtn" type="button" aria-label="Copy DLC link">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+        <div class="share-link-row">
+          <div class="share-url" id="mediumShareUrlNetlify"></div>
+          <button class="copy-share-btn" id="copyMediumNetlifyBtn" type="button" aria-label="Copy Netlify link">
+            <i class="fas fa-copy"></i>
+          </button>
         </div>
       </div>
     `;
@@ -4595,38 +4594,34 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     const closeBtn = shareOverlayEl.querySelector('#closeShareOverlayBtn');
     closeBtn?.addEventListener('click', closeShareOverlay);
 
-    const url1El = shareOverlayEl.querySelector('#shareUrl1');
-    const url2El = shareOverlayEl.querySelector('#shareUrl2');
-    const altUrl1El = shareOverlayEl.querySelector('#altShareUrl1');
-    const altUrl2El = shareOverlayEl.querySelector('#altShareUrl2');
-
-    // Copy handlers with feedback
-    const copyBtn1 = shareOverlayEl.querySelector('#copyShareUrl1Btn');
-    copyBtn1.addEventListener('click', async () => {
-      await copyTextToClipboard(url1El.textContent);
-      showCopyFeedback(copyBtn1);
-    });
-    const copyBtn2 = shareOverlayEl.querySelector('#copyShareUrl2Btn');
-    copyBtn2.addEventListener('click', async () => {
-      await copyTextToClipboard(url2El.textContent);
-      showCopyFeedback(copyBtn2);
-    });
-    const copyAlt1 = shareOverlayEl.querySelector('#copyAltUrl1Btn');
-    copyAlt1.addEventListener('click', async () => {
-      await copyTextToClipboard(altUrl1El.textContent);
-      showCopyFeedback(copyAlt1);
-    });
-    const copyAlt2 = shareOverlayEl.querySelector('#copyAltUrl2Btn');
-    copyAlt2.addEventListener('click', async () => {
-      await copyTextToClipboard(altUrl2El.textContent);
-      showCopyFeedback(copyAlt2);
+    // Copy handlers for Short links
+    const copyShortDlcBtn = shareOverlayEl.querySelector('#copyShortDlcBtn');
+    const shortDlcUrl = shareOverlayEl.querySelector('#shortShareUrlDlc');
+    copyShortDlcBtn.addEventListener('click', async () => {
+      await copyTextToClipboard(shortDlcUrl.textContent);
+      showCopyFeedback(copyShortDlcBtn);
     });
 
-    // Toggle alternative links
-    const toggleBtn = shareOverlayEl.querySelector('#alternativeToggleBtn');
-    const altLinksDiv = shareOverlayEl.querySelector('#alternativeLinks');
-    toggleBtn.addEventListener('click', () => {
-      altLinksDiv.classList.toggle('show');
+    const copyShortNetlifyBtn = shareOverlayEl.querySelector('#copyShortNetlifyBtn');
+    const shortNetlifyUrl = shareOverlayEl.querySelector('#shortShareUrlNetlify');
+    copyShortNetlifyBtn.addEventListener('click', async () => {
+      await copyTextToClipboard(shortNetlifyUrl.textContent);
+      showCopyFeedback(copyShortNetlifyBtn);
+    });
+
+    // Copy handlers for Medium links
+    const copyMediumDlcBtn = shareOverlayEl.querySelector('#copyMediumDlcBtn');
+    const mediumDlcUrl = shareOverlayEl.querySelector('#mediumShareUrlDlc');
+    copyMediumDlcBtn.addEventListener('click', async () => {
+      await copyTextToClipboard(mediumDlcUrl.textContent);
+      showCopyFeedback(copyMediumDlcBtn);
+    });
+
+    const copyMediumNetlifyBtn = shareOverlayEl.querySelector('#copyMediumNetlifyBtn');
+    const mediumNetlifyUrl = shareOverlayEl.querySelector('#mediumShareUrlNetlify');
+    copyMediumNetlifyBtn.addEventListener('click', async () => {
+      await copyTextToClipboard(mediumNetlifyUrl.textContent);
+      showCopyFeedback(copyMediumNetlifyBtn);
     });
   }
 
@@ -4635,22 +4630,20 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     const item = itemsData.find(i => String(i.uuid).toLowerCase() === String(uuid).toLowerCase());
     if (!item) return;
 
-    const code = generateShareCode(item.title, item.uuid);
-    const url1 = `${SHARE_CODE_BASE_DLC}/#${code}`;
-    const url2 = `${SHARE_CODE_BASE_NETLIFY}/#${code}`;
+    // Short: 4-character code (2 from title + 2 from uuid)
+    const shortCode = generateShareCode(item.title, item.uuid);
+    const shortUrlDlc = `${SHARE_CODE_BASE_DLC}/#${shortCode}`;
+    const shortUrlNetlify = `${SHARE_CODE_BASE_NETLIFY}/#${shortCode}`;
+    
+    // Medium: Title only (slug)
+    const mediumSlug = generateTitleSlug(item.title);
+    const mediumUrlDlc = `${SHARE_CODE_BASE_DLC}/#${mediumSlug}`;
+    const mediumUrlNetlify = `${SHARE_CODE_BASE_NETLIFY}/#${mediumSlug}`;
 
-    shareOverlayEl.querySelector('#shareUrl1').textContent = url1;
-    shareOverlayEl.querySelector('#shareUrl2').textContent = url2;
-
-    // Alternative links (title slug)
-    const slug = generateTitleSlug(item.title);
-    const altUrl1 = `${SHARE_CODE_BASE_DLC}/#${slug}`;
-    const altUrl2 = `${SHARE_CODE_BASE_NETLIFY}/#${slug}`;
-    shareOverlayEl.querySelector('#altShareUrl1').textContent = altUrl1;
-    shareOverlayEl.querySelector('#altShareUrl2').textContent = altUrl2;
-
-    // Hide alternative section initially
-    shareOverlayEl.querySelector('#alternativeLinks').classList.remove('show');
+    shareOverlayEl.querySelector('#shortShareUrlDlc').textContent = shortUrlDlc;
+    shareOverlayEl.querySelector('#shortShareUrlNetlify').textContent = shortUrlNetlify;
+    shareOverlayEl.querySelector('#mediumShareUrlDlc').textContent = mediumUrlDlc;
+    shareOverlayEl.querySelector('#mediumShareUrlNetlify').textContent = mediumUrlNetlify;
 
     shareOverlayEl.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -4668,7 +4661,15 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     else favs.add(uuid);
     saveFavourites(favs);
     setFavouriteButtonForUuid(uuid);
-    if (currentSort === 'favourites') renderItems();
+    if (currentSort === 'favourites') {
+      // If we're in favourites mode, re-run search with current query
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput.value.trim() !== '') {
+        performSearch(searchInput.value.toLowerCase());
+      } else {
+        renderItems();
+      }
+    }
   }
 
   document.addEventListener('click', (e) => {
@@ -4740,7 +4741,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     if (e.key === 'Escape' && overlay.classList.contains('active')) closeOverlay();
   });
 
-  // ---------- search, category, sort ----------
   function extractUuidFromSearchText(text) {
     if (!text) return null;
     const t = String(text).trim();
@@ -4755,35 +4755,28 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       if (mapped) return mapped;
     }
 
-    // Try to decode as slug and find by title slug
     try {
-      const decodedSlug = decodeURIComponent(t).toLowerCase();
-      // Remove spaces for comparison (since slugs have no spaces)
-      const slugWithoutSpaces = decodedSlug.replace(/\s+/g, '');
+      const cleanSlug = t.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       for (let [slug, item] of titleSlugToItem.entries()) {
-        if (slug === slugWithoutSpaces) {
+        if (slug === cleanSlug) {
           return item.uuid.toLowerCase();
         }
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
 
     try {
       if (!/^https?:\/\//i.test(t)) return null;
       const u = new URL(t);
-      // Extract hash (if any)
       if (u.hash) {
         const hash = u.hash.slice(1);
         if (SHARE_CODE_RE.test(hash)) {
           const mapped = shareCodeToUuid.get(hash.toLowerCase());
           if (mapped) return mapped;
         }
-        // Try as slug
         try {
-          const decodedSlug = decodeURIComponent(hash).toLowerCase().replace(/\s+/g, '');
+          const cleanSlug = hash.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           for (let [slug, item] of titleSlugToItem.entries()) {
-            if (slug === decodedSlug) {
+            if (slug === cleanSlug) {
               return item.uuid.toLowerCase();
             }
           }
@@ -4800,65 +4793,119 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
           const mapped = shareCodeToUuid.get(normalizedLast);
           if (mapped) return mapped;
         }
-        // Try as slug
         try {
-          const decodedSlug = decodeURIComponent(normalizedLast).toLowerCase().replace(/\s+/g, '');
+          const cleanSlug = normalizedLast.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
           for (let [slug, item] of titleSlugToItem.entries()) {
-            if (slug === decodedSlug) {
+            if (slug === cleanSlug) {
               return item.uuid.toLowerCase();
             }
           }
         } catch (e) {}
         return normalizedLast;
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     return null;
   }
 
   let searchTimeout;
-  let originalFilteredSortedItems = [];
+  let lastSearchQuery = '';
+  let currentCategory = 'all';
+  
+  function getBaseItems() {
+    let baseItems = itemsData;
+    
+    // Apply category filter
+    if (currentCategory !== 'all') {
+      baseItems = baseItems.filter(item => item.category === currentCategory);
+    }
+    
+    // Apply favourites filter if sort is favourites
+    if (currentSort === 'favourites') {
+      const favs = loadFavourites();
+      baseItems = baseItems.filter(item => favs.has(item.uuid));
+    }
+    
+    // Apply sorting
+    return sortItems(baseItems);
+  }
+
+  function performSearch(searchQuery) {
+    const container = document.getElementById('itemContainer');
+    
+    if (searchQuery.trim() === '') {
+      lastSearchQuery = '';
+      allFilteredSortedItems = getBaseItems();
+      container.innerHTML = '';
+      currentPage = 1;
+      hasMoreItems = allFilteredSortedItems.length > ITEMS_PER_PAGE;
+      const endIndex = Math.min(ITEMS_PER_PAGE, allFilteredSortedItems.length);
+      for (let i = 0; i < endIndex; i++) {
+        container.appendChild(cloneAndFixItem(allFilteredSortedItems[i]));
+      }
+      if (allFilteredSortedItems.length === 0) {
+        container.innerHTML = '<div class="no-items">No Results</div>';
+      }
+      return;
+    }
+
+    lastSearchQuery = searchQuery;
+    
+    container.innerHTML = '<div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i> Searching</div>';
+    
+    setTimeout(() => {
+      const directId = extractUuidFromSearchText(searchQuery);
+      if (directId) {
+        const found = itemsData.find(item => String(item.uuid).toLowerCase() === directId);
+        
+        // Check if found item matches current filters
+        if (found) {
+          if (currentCategory !== 'all' && found.category !== currentCategory) {
+            allFilteredSortedItems = [];
+          } else if (currentSort === 'favourites') {
+            const favs = loadFavourites();
+            allFilteredSortedItems = favs.has(found.uuid) ? [found] : [];
+          } else {
+            allFilteredSortedItems = [found];
+          }
+        } else {
+          allFilteredSortedItems = [];
+        }
+        
+        container.innerHTML = '';
+        currentPage = 1;
+        hasMoreItems = false;
+        if (allFilteredSortedItems.length > 0) {
+          container.appendChild(cloneAndFixItem(allFilteredSortedItems[0]));
+        } else {
+          container.innerHTML = '<div class="no-items">No Results</div>';
+        }
+        return;
+      }
+
+      const baseItems = getBaseItems();
+      const filtered = baseItems.filter(item => 
+        item.title.toLowerCase().includes(searchQuery)
+      );
+      
+      allFilteredSortedItems = filtered;
+      container.innerHTML = '';
+      currentPage = 1;
+      hasMoreItems = filtered.length > ITEMS_PER_PAGE;
+      const endIndex = Math.min(ITEMS_PER_PAGE, filtered.length);
+      for (let i = 0; i < endIndex; i++) {
+        container.appendChild(cloneAndFixItem(filtered[i]));
+      }
+      if (filtered.length === 0) container.innerHTML = '<div class="no-items">No Results</div>';
+    }, 300);
+  }
+
   document.getElementById('searchInput').addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
     clearTimeout(searchTimeout);
-    const container = document.getElementById('itemContainer');
     
     searchTimeout = setTimeout(() => {
-      if (q.trim() === '') {
-        resetPagination(); renderCurrentPage();
-      } else {
-        if (originalFilteredSortedItems.length === 0) {
-          originalFilteredSortedItems = [...allFilteredSortedItems];
-        }
-        container.innerHTML = '<div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i> Searching</div>';
-        
-        setTimeout(() => {
-          const directId = extractUuidFromSearchText(q);
-          if (directId) {
-            const found = itemsData.find(item => String(item.uuid).toLowerCase() === directId);
-            allFilteredSortedItems = found ? [found] : [];
-            container.innerHTML = '';
-            currentPage = 1;
-            hasMoreItems = false;
-            if (found) container.appendChild(cloneAndFixItem(found));
-            else container.innerHTML = '<div class="no-items">No Results</div>';
-            return;
-          }
-
-          const filtered = originalFilteredSortedItems.filter(item => item.title.toLowerCase().includes(q));
-          allFilteredSortedItems = filtered;
-          container.innerHTML = '';
-          currentPage = 1;
-          hasMoreItems = filtered.length > ITEMS_PER_PAGE;
-          const endIndex = Math.min(ITEMS_PER_PAGE, filtered.length);
-          for (let i = 0; i < endIndex; i++) {
-            container.appendChild(cloneAndFixItem(filtered[i]));
-          }
-          if (filtered.length === 0) container.innerHTML = '<div class="no-items">No Results</div>';
-        }, 300);
-      }
+      performSearch(q);
     }, 500);
   });
 
@@ -4866,9 +4913,15 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     btn.addEventListener('click', () => {
       document.querySelectorAll('.category-buttons button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('searchInput').value = '';
-      originalFilteredSortedItems = [];
-      renderItems();
+      currentCategory = btn.dataset.filter;
+      
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput.value.trim() !== '') {
+        performSearch(searchInput.value.toLowerCase());
+      } else {
+        allFilteredSortedItems = getBaseItems();
+        renderItems();
+      }
     });
   });
 
@@ -4890,9 +4943,15 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       }
       updateSortUI();
       saveCurrentSort();
-      document.getElementById('searchInput').value = '';
-      originalFilteredSortedItems = [];
-      renderItems();
+      
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput.value.trim() !== '') {
+        performSearch(searchInput.value.toLowerCase());
+      } else {
+        allFilteredSortedItems = getBaseItems();
+        renderItems();
+      }
+      
       settingsBtn.classList.remove('active');
       sortDropdown.classList.remove('active');
     });
@@ -4933,7 +4992,6 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
     }
   });
 
-  // ---------- INIT ----------
   document.addEventListener('DOMContentLoaded', () => {
     const categoryNames = { worlds:"World", addons:"Addon", mashups:"Mashup", textures:"Texture", skins:"Skin" };
     document.querySelectorAll('.item').forEach(item => fixItemStructure(item));
@@ -4945,11 +5003,12 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       if (subtitleEl) subtitleEl.textContent = item.subtitle;
     });
 
-    // Build maps already inside loadDownloadCounts
+    if (itemsData.length > 0) { 
+      allFilteredSortedItems = getBaseItems();
+      renderItems(); 
+      setupInfiniteScroll(); 
+    }
 
-    if (itemsData.length > 0) { renderItems(); setupInfiniteScroll(); }
-
-    // Deep link from hash
     const hash = getHashFromUrl();
     if (hash) {
       const searchInput = document.getElementById('searchInput');
@@ -4959,11 +5018,15 @@ By Lifeboat</p><span class="item-creator" style="display: none;">Lifeboat</span>
       }
     }
 
+    const logo = document.getElementById('logo');
+    logo.addEventListener('click', () => {
+      window.location.reload();
+    });
+
     initSliderElements();
     createStars();
   });
 
-  // lazy-loading optimization
   (function lazyLoadingOptimization() {
     function applyLazyLoadingAttributes(root) {
       const scope = root && root.querySelectorAll ? root : document;
