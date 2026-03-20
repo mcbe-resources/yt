@@ -236,9 +236,10 @@
   let itemsData = [];
   let shareCodeToUuid = new Map();
   let titleSlugToItem = new Map(); // for alternative links
-  const SHARE_CODE_BASE_DLC = 'https://mcbe-resources.github.io/yt/';
+  const SHARE_CODE_BASE_DLC = 'https://mcbe-resources.github.io/yt';
   const SHARE_CODE_BASE_NETLIFY = 'https://marketplacedlc.netlify.app';
-  const SHARE_CODE_RE = /^s[a-z0-9]{3}[0-9a-f]{3}e$/i;
+  // Updated regex: exactly 6 characters (3 name part + 3 id part), no s prefix or e suffix
+  const SHARE_CODE_RE = /^[a-z0-9]{6}$/i;
 
   function normalizeShareNamePart(title) {
     const normalized = String(title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -249,7 +250,8 @@
   function generateShareCode(title, uuid) {
     const namePart = normalizeShareNamePart(title);
     const idPart = String(uuid || '').toLowerCase().slice(0, 3);
-    return `s${namePart}${idPart}e`;
+    // Removed 's' prefix and 'e' suffix
+    return `${namePart}${idPart}`;
   }
 
   // Generate title slug for alternative links
